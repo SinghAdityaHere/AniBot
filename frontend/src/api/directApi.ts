@@ -14,6 +14,16 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
   }
 }
 
+// Check if running on static host like GitHub Pages
+export function isStaticHost(): boolean {
+  return typeof window !== 'undefined' && (
+    window.location.hostname.includes('github.io') ||
+    window.location.hostname.includes('vercel.app') ||
+    window.location.hostname.includes('netlify.app') ||
+    (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+  );
+}
+
 // Direct Browser Anime Fetching (Jikan v4 -> Kitsu fallback)
 export async function fetchDirectAnimeSearch(query: string, page = 1): Promise<Anime[]> {
   try {
@@ -148,8 +158,22 @@ export async function fetchDirectMangaSearch(query: string, page = 1): Promise<M
 }
 
 export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> {
-  const rawId = id.replace('mangadex_', '').replace('manga_', '').replace('kitsu_manga_', '');
+  const rawId = id.replace('mangadex_', '').replace('kitsu_manga_', '').replace('manga_', '').replace('mal_', '');
 
+  // 1. Kitsu Manga ID
+  if (id.startsWith('kitsu_manga_') || id.startsWith('kitsu_')) {
+    try {
+      const res = await fetchWithTimeout(`https://kitsu.io/api/edge/manga/${rawId}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) return normalizeKitsuManga(json.data);
+      }
+    } catch (e) {
+      console.warn('[DirectApi] Kitsu manga detail fetch error:', e);
+    }
+  }
+
+  // 2. MangaDex ID
   if (id.startsWith('mangadex_')) {
     try {
       const res = await fetchWithTimeout(`https://api.mangadex.org/manga/${rawId}?includes%5B%5D=cover_art`);
@@ -157,22 +181,36 @@ export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> 
         const json = await res.json();
         if (json.data) return normalizeMangaDex(json.data);
       }
-    } catch {}
+    } catch (e) {
+      console.warn('[DirectApi] MangaDex detail fetch error:', e);
+    }
   }
 
+  // 3. MyAnimeList / Jikan Manga ID
   try {
     const res = await fetchWithTimeout(`https://api.jikan.moe/v4/manga/${rawId}`);
     if (res.ok) {
       const json = await res.json();
       if (json.data) return normalizeJikanManga(json.data);
     }
-  } catch {}
+  } catch (e) {
+    console.warn('[DirectApi] Jikan manga detail fetch error:', e);
+  }
 
+  // Fallbacks across providers
   try {
     const res = await fetchWithTimeout(`https://kitsu.io/api/edge/manga/${rawId}`);
     if (res.ok) {
       const json = await res.json();
       if (json.data) return normalizeKitsuManga(json.data);
+    }
+  } catch {}
+
+  try {
+    const res = await fetchWithTimeout(`https://api.mangadex.org/manga/${rawId}?includes%5B%5D=cover_art`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) return normalizeMangaDex(json.data);
     }
   } catch {}
 
@@ -377,19 +415,19 @@ function normalizeKitsuManga(item: any): Manga {
   const attr = item.attributes || {};
   return {
     id: `kitsu_manga_${item.id}`,
-    title: attr.canonicalTitle || attr.en_jp || 'Unknown Manga',
+    title: attr.canonicalTitle || attr.en_jp || attr.en || 'Unknown Manga',
     alternativeTitles: attr.titles ? Object.values(attr.titles).filter((t): t is string => typeof t === 'string') : [],
-    description: attr.synopsis || undefined,
-    image: attr.posterImage?.large || attr.posterImage?.medium,
+    description: attr.synopsis || attr.description || undefined,
+    image: attr.posterImage?.large || attr.posterImage?.medium || attr.posterImage?.original,
     year: attr.startDate ? new Date(attr.startDate).getFullYear() : undefined,
     status: attr.status === 'finished' ? 'Finished' : 'Publishing',
-    type: attr.mangaType ? attr.mangaType.toUpperCase() : 'Manga',
+    type: attr.mangaType ? attr.mangaType.toUpperCase() : 'MANGA',
     chapters: attr.chapterCount || undefined,
     volumes: attr.volumeCount || undefined,
     score: attr.averageRating ? parseFloat(attr.averageRating) / 10 : undefined,
     genres: [],
     authors: [],
-    externalIds: { kitsu: item.id },
+    externalIds: { kitsu: String(item.id) },
   };
 }
 
@@ -408,7 +446,7 @@ function normalizeMangaDex(item: any): Manga {
     image: coverUrl,
     year: attr.year || undefined,
     status: attr.status === 'completed' ? 'Finished' : 'Publishing',
-    type: attr.originalLanguage === 'ja' ? 'Manga' : 'Manhwa',
+    type: attr.originalLanguage === 'ja' ? 'MANGA' : 'MANHWA',
     genres: (attr.tags || []).map((t: any) => ({ id: t.id, name: t.attributes?.name?.en || 'Genre' })),
     authors: [],
     externalIds: { mangaDex: item.id },
@@ -418,13 +456,13 @@ function normalizeMangaDex(item: any): Manga {
 function normalizeJikanManga(item: any): Manga {
   return {
     id: `manga_${item.mal_id}`,
-    title: item.title || 'Unknown Manga',
+    title: item.title || item.title_english || 'Unknown Manga',
     alternativeTitles: item.title_english ? [item.title_english] : [],
-    description: item.synopsis || undefined,
+    description: item.synopsis || item.background || undefined,
     image: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url,
     year: item.published?.from ? new Date(item.published.from).getFullYear() : undefined,
     status: item.status,
-    type: item.type || 'Manga',
+    type: item.type || 'MANGA',
     chapters: item.chapters || undefined,
     volumes: item.volumes || undefined,
     score: item.score || undefined,

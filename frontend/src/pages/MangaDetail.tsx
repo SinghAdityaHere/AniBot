@@ -4,7 +4,7 @@ import { useMangaDetail, useMangaSearch } from '../api/manga';
 import { MangaGrid } from '../components/manga/MangaGrid';
 import { AnimeHeroSkeleton } from '../components/ui/Skeleton';
 import { ErrorState } from '../components/ui/ErrorState';
-import { ChevronRight, Star, BookOpen, Layers, ExternalLink } from 'lucide-react';
+import { ChevronRight, Star, BookOpen, Layers } from 'lucide-react';
 
 export const MangaDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +15,8 @@ export const MangaDetailPage: React.FC = () => {
   if (isLoading) return <AnimeHeroSkeleton />;
   if (isError || !manga) return <ErrorState message="Could not load details for this manga." onRetry={refetch} />;
 
+  const altTitles = manga.alternativeTitles || [];
+  const authors = manga.authors || [];
   const filteredRelated = relatedManga.filter((m) => m.id !== manga.id).slice(0, 4);
 
   return (
@@ -37,9 +39,9 @@ export const MangaDetailPage: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <h1 style={{ fontSize: 32, marginBottom: 4 }}>{manga.title}</h1>
-            {manga.alternativeTitles.length > 0 && (
+            {altTitles.length > 0 && (
               <p style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}>
-                {manga.alternativeTitles.slice(0, 3).join(' • ')}
+                {altTitles.slice(0, 3).join(' • ')}
               </p>
             )}
           </div>
@@ -78,11 +80,11 @@ export const MangaDetailPage: React.FC = () => {
             )}
           </div>
 
-          {manga.authors.length > 0 && (
+          {authors.length > 0 && (
             <div>
               <strong style={{ fontSize: 13 }}>Author / Artist:</strong>
               <span style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginLeft: 8 }}>
-                {manga.authors.map((a) => a.name).join(', ')}
+                {authors.map((a) => a.name).join(', ')}
               </span>
             </div>
           )}

@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { Manga } from '@anibot/shared';
 import { fetchApi } from './client';
-import { fetchDirectMangaSearch, fetchDirectMangaDetail } from './directApi';
+import { fetchDirectMangaSearch, fetchDirectMangaDetail, isStaticHost } from './directApi';
 
 export function useMangaSearch(query: string, page = 1) {
   return useQuery<Manga[]>({
     queryKey: ['manga', 'search', query, page],
     queryFn: async () => {
+      if (isStaticHost()) {
+        return await fetchDirectMangaSearch(query, page);
+      }
       try {
         return await fetchApi<Manga[]>(`/api/v1/manga/search?q=${encodeURIComponent(query)}&page=${page}`);
       } catch (err) {
@@ -23,6 +26,13 @@ export function useMangaDetail(id?: string) {
     queryKey: ['manga', 'detail', id],
     queryFn: async () => {
       if (!id) throw new Error('Manga ID required');
+      
+      if (isStaticHost()) {
+        const res = await fetchDirectMangaDetail(id);
+        if (res) return res;
+        throw new Error('Manga not found');
+      }
+
       try {
         return await fetchApi<Manga>(`/api/v1/manga/${id}`);
       } catch (err) {
