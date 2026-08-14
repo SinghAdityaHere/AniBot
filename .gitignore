@@ -1,0 +1,22 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+build
+.vite
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Database
+backend/prisma/*.db
+backend/prisma/*.db-journal
+*.db
+
+# System files
+.DS_Store
+Thumbs.db

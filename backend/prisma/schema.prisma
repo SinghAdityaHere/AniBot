@@ -1,0 +1,53 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Favourite {
+  id        String   @id @default(cuid())
+  userId    String
+  animeId   String
+  animeData String   // JSON string of normalized Anime object
+  createdAt DateTime @default(now())
+
+  @@unique([userId, animeId])
+}
+
+model RecentSearch {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String
+  animeId   String?
+  createdAt DateTime @default(now())
+}
+
+model AnimeCache {
+  id        String   @id
+  data      String   // JSON string
+  provider  String
+  cachedAt  DateTime @default(now())
+  expiresAt DateTime
+}
+
+model ProviderMapping {
+  id               String   @id @default(cuid())
+  canonicalAnimeId String
+  provider         String
+  providerId       String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([provider, providerId])
+}
+
+model QuoteCache {
+  id         String   @id @default(cuid())
+  animeTitle String   @default("random")
+  data       String   // JSON string
+  cachedAt   DateTime @default(now())
+  expiresAt  DateTime
+}

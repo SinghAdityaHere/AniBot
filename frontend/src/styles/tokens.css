@@ -1,0 +1,42 @@
+:root {
+  /* Color Palette — White-first, Apple Maps inspired */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f7;
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f9f9f9;
+
+  --color-text-primary: #111111;
+  --color-text-secondary: #6b6b6b;
+  --color-text-muted: #9c9c9c;
+
+  --color-accent: #6c63ff;
+  --color-accent-hover: #5950e6;
+  --color-accent-light: #eef0ff;
+  
+  --color-border: #e8e8e8;
+  --color-border-light: #f2f2f2;
+
+  --color-score: #f59e0b;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+
+  /* Typography */
+  --font-headline: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Elevation & Shadows */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-floating: 0 12px 32px rgba(108, 99, 255, 0.08);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+}
