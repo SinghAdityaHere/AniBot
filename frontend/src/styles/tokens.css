@@ -1,9 +1,9 @@
 :root {
-  /* Color Palette — White-first, Apple Maps inspired */
+  /* Light Mode Color Palette — Apple Maps inspired */
   --bg-primary: #ffffff;
   --bg-secondary: #f7f7f7;
   --bg-surface: #ffffff;
-  --bg-surface-subtle: #f9f9f9;
+  --bg-surface-elevated: #ffffff;
 
   --color-text-primary: #111111;
   --color-text-secondary: #6b6b6b;
@@ -28,6 +28,7 @@
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.12);
   --shadow-floating: 0 12px 32px rgba(108, 99, 255, 0.08);
+  --shadow-dropdown: 0 12px 32px rgba(0, 0, 0, 0.12);
 
   /* Radius */
   --radius-sm: 6px;
@@ -39,4 +40,32 @@
   --transition-fast: 150ms ease;
   --transition-normal: 200ms ease;
   --transition-slow: 300ms ease;
+}
+
+[data-theme="dark"] {
+  /* Dark Mode Color Palette — Sleek, High-Contrast Dark */
+  --bg-primary: #0a0b0e;
+  --bg-secondary: #12141c;
+  --bg-surface: #161824;
+  --bg-surface-elevated: #1e2132;
+
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  --color-accent: #7c75ff;
+  --color-accent-hover: #918bff;
+  --color-accent-light: rgba(124, 117, 255, 0.15);
+  
+  --color-border: #242738;
+  --color-border-light: #1b1e2c;
+
+  --color-score: #fbbf24;
+  --color-success: #4ade80;
+  --color-error: #f87171;
+
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --shadow-floating: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-dropdown: 0 16px 40px rgba(0, 0, 0, 0.6);
 }
