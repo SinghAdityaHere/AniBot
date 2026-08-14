@@ -45,6 +45,4 @@ npm run dev
 
 ## Project Preview
 
-![AniBot Dashboard Preview](./docs/preview1.png)
-
-![AniBot Manga Explorer Preview](./docs/preview2.png)
+(./docs/preview.png)
