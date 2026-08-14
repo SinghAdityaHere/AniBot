@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "test": "tsx --test src/tests/normalizer.test.ts src/tests/provider.test.ts",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push"
