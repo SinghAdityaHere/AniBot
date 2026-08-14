@@ -43,12 +43,6 @@ npm run dev
 
 ## Project Preview
 
-![AniBot Dashboard Preview](./docs/preview1.jpg)
+![AniBot Dashboard Preview](./docs/preview1.png)
 
 ![AniBot Manga Explorer Preview](./docs/preview2.png)
-
----
-
-## License
-
-Distributed under the MIT License.
