@@ -13,6 +13,13 @@ export interface ExternalIds {
   aniDb?: string;
 }
 
+export interface MediaRelation {
+  id: string | number;
+  type: string; // e.g. "Manga", "Anime", "Adaptation", "Side story"
+  name: string;
+  url?: string;
+}
+
 export interface Anime {
   id: string;
   title: string;
@@ -30,4 +37,5 @@ export interface Anime {
   studios: Studio[];
   airedInfo?: string;
   externalIds: ExternalIds;
+  relations?: MediaRelation[];
 }

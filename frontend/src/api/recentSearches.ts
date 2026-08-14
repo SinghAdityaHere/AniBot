@@ -25,14 +25,22 @@ export function useRecentSearchMutations() {
   const queryClient = useQueryClient();
 
   const addSearch = useMutation({
-    mutationFn: async ({ query, animeId }: { query: string; animeId?: string }) => {
+    mutationFn: async ({
+      query,
+      animeId,
+      mediaType,
+    }: {
+      query: string;
+      animeId?: string;
+      mediaType?: 'anime' | 'manga' | 'all';
+    }) => {
       try {
         return await fetchApi<RecentSearch>('/api/v1/recent-searches', {
           method: 'POST',
-          body: JSON.stringify({ query, animeId }),
+          body: JSON.stringify({ query, animeId, mediaType }),
         });
       } catch {
-        return saveLocalRecentSearch(query, animeId);
+        return saveLocalRecentSearch(query, animeId, mediaType);
       }
     },
     onSuccess: () => {

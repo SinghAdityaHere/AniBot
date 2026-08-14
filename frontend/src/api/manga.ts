@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { Manga } from '@anibot/shared';
 import { fetchApi } from './client';
-import { fetchDirectMangaSearch, fetchDirectMangaDetail, isStaticHost } from './directApi';
+import {
+  fetchDirectMangaSearch,
+  fetchDirectMangaDetail,
+  fetchDirectMangaRelations,
+  fetchDirectMangaRecommendations,
+  isStaticHost,
+} from './directApi';
 
 export function useMangaSearch(query: string, page = 1) {
   return useQuery<Manga[]>({
@@ -44,5 +50,37 @@ export function useMangaDetail(id?: string) {
     },
     enabled: !!id,
     staleTime: 30 * 60 * 1000,
+  });
+}
+
+export function useMangaRelations(id?: string) {
+  return useQuery<any[]>({
+    queryKey: ['manga', 'relations', id],
+    queryFn: async () => {
+      if (!id) return [];
+      try {
+        return await fetchApi<any[]>(`/api/v1/manga/${id}/relations`);
+      } catch {
+        return await fetchDirectMangaRelations(id);
+      }
+    },
+    enabled: !!id,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+export function useMangaRecommendations(id?: string) {
+  return useQuery<Manga[]>({
+    queryKey: ['manga', 'recommendations', id],
+    queryFn: async () => {
+      if (!id) return [];
+      try {
+        return await fetchApi<Manga[]>(`/api/v1/manga/${id}/recommendations`);
+      } catch {
+        return await fetchDirectMangaRecommendations(id);
+      }
+    },
+    enabled: !!id,
+    staleTime: 60 * 60 * 1000,
   });
 }

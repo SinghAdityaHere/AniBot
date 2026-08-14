@@ -1,33 +1,69 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useMangaDetail, useMangaSearch } from '../api/manga';
+import { useMangaDetail, useMangaRelations, useMangaRecommendations, useMangaSearch } from '../api/manga';
+import { useRecentlyViewedMutations } from '../api/recentlyViewed';
+import { useLibrary, useLibraryMutations } from '../api/library';
 import { MangaGrid } from '../components/manga/MangaGrid';
+import { RelatedMediaCard } from '../components/media/RelatedMediaCard';
+import { ShareButton } from '../components/media/ShareButton';
 import { AnimeHeroSkeleton } from '../components/ui/Skeleton';
 import { ErrorState } from '../components/ui/ErrorState';
-import { ChevronRight, Star, BookOpen, Layers } from 'lucide-react';
+import { ChevronRight, Star, BookOpen, Layers, GitFork, Sparkles, Bookmark } from 'lucide-react';
 
 export const MangaDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { data: manga, isLoading, isError, refetch } = useMangaDetail(id);
+  const { data: relations = [] } = useMangaRelations(id);
+  const { data: recommendations = [] } = useMangaRecommendations(id);
+  const { recordView } = useRecentlyViewedMutations();
+  const { data: library = [] } = useLibrary();
+  const { addItem, removeItem } = useLibraryMutations();
 
-  const { data: relatedManga = [] } = useMangaSearch('Berserk');
+  const { data: fallbackManga = [] } = useMangaSearch('Berserk');
+
+  useEffect(() => {
+    if (manga) {
+      recordView({
+        mediaId: manga.id,
+        mediaType: 'manga',
+        title: manga.title,
+        image: manga.image,
+      });
+    }
+  }, [manga]);
 
   if (isLoading) return <AnimeHeroSkeleton />;
   if (isError || !manga) return <ErrorState message="Could not load details for this manga." onRetry={refetch} />;
 
+  const isInLibrary = library.some((item) => item.mediaId === manga.id);
   const altTitles = manga.alternativeTitles || [];
   const authors = manga.authors || [];
-  const filteredRelated = relatedManga.filter((m) => m.id !== manga.id).slice(0, 4);
+
+  const finalRecommendations = recommendations.length > 0
+    ? recommendations
+    : fallbackManga.filter((m) => m.id !== manga.id).slice(0, 4);
+
+  const handleLibraryToggle = () => {
+    if (isInLibrary) {
+      removeItem(manga.id);
+    } else {
+      addItem({ mediaData: manga, mediaType: 'manga', category: 'reading' });
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
-      {/* Breadcrumbs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-secondary)' }}>
-        <Link to="/">Home</Link>
-        <ChevronRight size={14} />
-        <Link to="/manga">Manga</Link>
-        <ChevronRight size={14} />
-        <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{manga.title}</span>
+      {/* Breadcrumbs & Share */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+          <Link to="/">Home</Link>
+          <ChevronRight size={14} />
+          <Link to="/manga">Manga</Link>
+          <ChevronRight size={14} />
+          <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{manga.title}</span>
+        </div>
+
+        <ShareButton title="Share Manga" />
       </div>
 
       {/* Manga Detail Hero */}
@@ -88,6 +124,27 @@ export const MangaDetailPage: React.FC = () => {
               </span>
             </div>
           )}
+
+          <div style={{ marginTop: 8 }}>
+            <button
+              onClick={handleLibraryToggle}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '12px 24px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: isInLibrary ? 'var(--color-accent-light)' : 'var(--color-accent)',
+                color: isInLibrary ? 'var(--color-accent)' : '#ffffff',
+                fontWeight: 600,
+                fontSize: 14,
+                border: isInLibrary ? '1px solid var(--color-accent)' : 'none',
+              }}
+            >
+              <Bookmark size={18} fill={isInLibrary ? 'var(--color-accent)' : 'none'} />
+              {isInLibrary ? 'In My Library' : 'Add to Reading List'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -101,11 +158,35 @@ export const MangaDetailPage: React.FC = () => {
         </section>
       )}
 
-      {/* Recommendations */}
-      {filteredRelated.length > 0 && (
+      {/* Anime ↔ Manga Ecosystem (Relations / Adaptations) */}
+      {relations.length > 0 && (
         <section>
-          <h3 style={{ fontSize: 20, marginBottom: 16 }}>Popular Manga Recommendations</h3>
-          <MangaGrid mangas={filteredRelated} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <GitFork size={20} color="var(--color-accent)" />
+            <h3 style={{ fontSize: 20 }}>Anime Adaptation & Relations</h3>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+            {relations.slice(0, 6).map((rel) => (
+              <RelatedMediaCard
+                key={rel.id}
+                id={rel.id}
+                name={rel.name}
+                type={rel.type}
+                mediaType={rel.mediaType}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Recommendations */}
+      {finalRecommendations.length > 0 && (
+        <section>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <Sparkles size={20} color="var(--color-score)" />
+            <h3 style={{ fontSize: 20 }}>Recommended Manga Series</h3>
+          </div>
+          <MangaGrid mangas={finalRecommendations} />
         </section>
       )}
     </div>

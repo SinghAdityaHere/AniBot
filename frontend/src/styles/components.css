@@ -505,3 +505,29 @@
 .mobile-nav-item.active {
   color: var(--color-accent);
 }
+
+.suggestion-item.selected {
+  background-color: var(--color-accent-light);
+  border-left: 3px solid var(--color-accent);
+}
+
+.rail-nav-btn:hover {
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent) !important;
+  transform: scale(1.08);
+}
+
+.related-media-card:hover {
+  border-color: var(--color-accent) !important;
+  transform: translateY(-2px);
+}
+
+.cmd-palette-btn:hover {
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent) !important;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

@@ -2,6 +2,7 @@ import React from 'react';
 import { Heart } from 'lucide-react';
 import { Anime } from '@anibot/shared';
 import { useFavourites, useToggleFavourite } from '../../api/favourites';
+import { useLibrary } from '../../api/library';
 
 interface FavouriteButtonProps {
   anime: Anime;
@@ -10,9 +11,12 @@ interface FavouriteButtonProps {
 
 export const FavouriteButton: React.FC<FavouriteButtonProps> = ({ anime, overlay = false }) => {
   const { data: favourites = [] } = useFavourites();
+  const { data: library = [] } = useLibrary();
   const { addFavourite, removeFavourite, isLoading } = useToggleFavourite();
 
-  const isFav = favourites.some((f) => f.animeId === anime.id);
+  const isFav =
+    favourites.some((f) => f.animeId === anime.id) ||
+    library.some((item) => item.mediaId === anime.id);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();

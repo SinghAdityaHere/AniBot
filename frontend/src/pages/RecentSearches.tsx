@@ -69,7 +69,7 @@ export const RecentSearchesPage: React.FC = () => {
           {recentSearches.map((item) => (
             <div
               key={item.id}
-              onClick={() => handleOpenSearch(item.query)}
+              onClick={() => navigate(`/search?q=${encodeURIComponent(item.query)}&type=${item.mediaType || 'all'}`)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -86,6 +86,21 @@ export const RecentSearchesPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <History size={18} color="var(--color-text-muted)" />
                 <span style={{ fontWeight: 600, fontSize: 16 }}>{item.query}</span>
+                {item.mediaType && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-pill)',
+                      backgroundColor: 'var(--color-accent-light)',
+                      color: 'var(--color-accent)',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {item.mediaType}
+                  </span>
+                )}
                 <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
                   {new Date(item.createdAt).toLocaleDateString()}
                 </span>

@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { Anime } from '@anibot/shared';
 import { fetchApi } from './client';
-import { fetchDirectAnimeSearch, fetchDirectAnimeDetail, isStaticHost } from './directApi';
+import {
+  fetchDirectAnimeSearch,
+  fetchDirectAnimeDetail,
+  fetchDirectAnimeRelations,
+  fetchDirectAnimeRecommendations,
+  isStaticHost,
+} from './directApi';
 
 export function useAnimeSearch(query: string, page = 1) {
   return useQuery<Anime[]>({
@@ -44,5 +50,37 @@ export function useAnimeDetail(id?: string) {
     },
     enabled: !!id,
     staleTime: 30 * 60 * 1000,
+  });
+}
+
+export function useAnimeRelations(id?: string) {
+  return useQuery<any[]>({
+    queryKey: ['anime', 'relations', id],
+    queryFn: async () => {
+      if (!id) return [];
+      try {
+        return await fetchApi<any[]>(`/api/v1/anime/${id}/relations`);
+      } catch {
+        return await fetchDirectAnimeRelations(id);
+      }
+    },
+    enabled: !!id,
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+export function useAnimeRecommendations(id?: string) {
+  return useQuery<Anime[]>({
+    queryKey: ['anime', 'recommendations', id],
+    queryFn: async () => {
+      if (!id) return [];
+      try {
+        return await fetchApi<Anime[]>(`/api/v1/anime/${id}/recommendations`);
+      } catch {
+        return await fetchDirectAnimeRecommendations(id);
+      }
+    },
+    enabled: !!id,
+    staleTime: 60 * 60 * 1000,
   });
 }

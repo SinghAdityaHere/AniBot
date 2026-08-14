@@ -1,4 +1,4 @@
-import { Genre } from './anime';
+import { Genre, MediaRelation } from './anime';
 
 export interface Author {
   id: string | number;
@@ -28,6 +28,7 @@ export interface Manga {
   authors: Author[];
   publishedInfo?: string;
   externalIds: MangaExternalIds;
+  relations?: MediaRelation[];
 }
 
 export interface AnimeFact {

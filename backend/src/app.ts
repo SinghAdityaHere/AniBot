@@ -41,6 +41,7 @@ app.use('/api/v1/manga', mangaRouter);
 app.use('/api/v1/quotes', quotesRouter);
 app.use('/api/v1/facts', factsRouter);
 app.use('/api/v1/favourites', favouritesRouter);
+app.use('/api/v1/library', favouritesRouter);
 app.use('/api/v1/recent-searches', recentSearchesRouter);
 
 // 404 Handler

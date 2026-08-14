@@ -1,4 +1,5 @@
 import { Anime, Manga, AnimeQuote, AnimeFact, Favourite, RecentSearch } from '@anibot/shared';
+import { saveStoredLibraryItem, removeStoredLibraryItem } from '../services/storage';
 
 // Helper to fetch with timeout
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 8000): Promise<Response> {
@@ -336,17 +337,23 @@ export function getLocalFavourites(): Favourite[] {
 export function saveLocalFavourite(animeId: string, animeData: Anime): Favourite {
   const list = getLocalFavourites();
   const existing = list.find((f) => f.animeId === animeId);
-  if (existing) return existing;
-
-  const newItem: Favourite = {
+  
+  const newItem: Favourite = existing || {
     id: `fav_${Date.now()}`,
     userId: 'local_user',
     animeId,
     animeData,
     createdAt: new Date().toISOString(),
   };
-  const updated = [newItem, ...list];
-  localStorage.setItem('anibot_favourites', JSON.stringify(updated));
+
+  if (!existing) {
+    const updated = [newItem, ...list];
+    localStorage.setItem('anibot_favourites', JSON.stringify(updated));
+  }
+
+  // Also sync into anibot_library so Library page reflects it immediately
+  saveStoredLibraryItem(animeData, 'anime', 'favourited');
+
   return newItem;
 }
 
@@ -354,6 +361,9 @@ export function removeLocalFavourite(animeId: string): void {
   const list = getLocalFavourites();
   const updated = list.filter((f) => f.animeId !== animeId);
   localStorage.setItem('anibot_favourites', JSON.stringify(updated));
+
+  // Also remove from anibot_library
+  removeStoredLibraryItem(animeId);
 }
 
 export function getLocalRecentSearches(): RecentSearch[] {
@@ -365,7 +375,7 @@ export function getLocalRecentSearches(): RecentSearch[] {
   }
 }
 
-export function saveLocalRecentSearch(query: string, animeId?: string): RecentSearch {
+export function saveLocalRecentSearch(query: string, animeId?: string, mediaType?: 'anime' | 'manga' | 'all'): RecentSearch {
   const trimmed = query.trim();
   const list = getLocalRecentSearches().filter((s) => s.query.toLowerCase() !== trimmed.toLowerCase());
   const newItem: RecentSearch = {
@@ -373,6 +383,7 @@ export function saveLocalRecentSearch(query: string, animeId?: string): RecentSe
     userId: 'local_user',
     query: trimmed,
     animeId,
+    mediaType,
     createdAt: new Date().toISOString(),
   };
   const updated = [newItem, ...list].slice(0, 20);
@@ -390,11 +401,188 @@ export function clearLocalRecentSearches(): void {
   localStorage.removeItem('anibot_recent_searches');
 }
 
+// Discovery Feeds & Relations
+export async function fetchDirectTrendingAnime(): Promise<Anime[]> {
+  try {
+    const res = await fetchWithRetry('https://api.jikan.moe/v4/top/anime?filter=airing&limit=20');
+    if (res.ok) {
+      const json = await res.json();
+      return (json.data || []).map((item: any) => normalizeJikan(item));
+    }
+  } catch (err) {
+    console.warn('[DirectApi] fetchDirectTrendingAnime failed:', err);
+  }
+  return fetchDirectAnimeSearch('', 1);
+}
+
+export async function fetchDirectCurrentlyAiring(): Promise<Anime[]> {
+  try {
+    const res = await fetchWithRetry('https://api.jikan.moe/v4/seasons/now?limit=20');
+    if (res.ok) {
+      const json = await res.json();
+      return (json.data || []).map((item: any) => normalizeJikan(item));
+    }
+  } catch (err) {
+    console.warn('[DirectApi] fetchDirectCurrentlyAiring failed:', err);
+  }
+  return [];
+}
+
+export async function fetchDirectUpcomingAnime(): Promise<Anime[]> {
+  try {
+    const res = await fetchWithRetry('https://api.jikan.moe/v4/seasons/upcoming?limit=20');
+    if (res.ok) {
+      const json = await res.json();
+      return (json.data || []).map((item: any) => normalizeJikan(item));
+    }
+  } catch (err) {
+    console.warn('[DirectApi] fetchDirectUpcomingAnime failed:', err);
+  }
+  return [];
+}
+
+export async function fetchDirectTopManga(): Promise<Manga[]> {
+  try {
+    const res = await fetchWithRetry('https://api.jikan.moe/v4/top/manga?limit=20');
+    if (res.ok) {
+      const json = await res.json();
+      return (json.data || []).map((item: any) => normalizeJikanManga(item));
+    }
+  } catch (err) {
+    console.warn('[DirectApi] fetchDirectTopManga failed:', err);
+  }
+  return fetchDirectMangaSearch('', 1);
+}
+
+export async function fetchDirectRandomAnime(): Promise<Anime | null> {
+  try {
+    const res = await fetchWithRetry('https://api.jikan.moe/v4/random/anime', {}, 2, 400);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) return normalizeJikan(json.data);
+    }
+  } catch (err) {
+    console.warn('[DirectApi] Jikan random anime endpoint failed, trying fallback...', err);
+  }
+
+  // Fallback: pick a random title from top anime search results
+  try {
+    const randomPage = Math.floor(Math.random() * 5) + 1;
+    const items = await fetchDirectAnimeSearch('', randomPage);
+    if (items.length > 0) {
+      const randomIdx = Math.floor(Math.random() * items.length);
+      return items[randomIdx];
+    }
+  } catch {}
+
+  return null;
+}
+
+export async function fetchDirectRandomManga(): Promise<Manga | null> {
+  try {
+    const res = await fetchWithRetry('https://api.jikan.moe/v4/random/manga', {}, 2, 400);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) return normalizeJikanManga(json.data);
+    }
+  } catch (err) {
+    console.warn('[DirectApi] Jikan random manga endpoint failed, trying fallback...', err);
+  }
+
+  // Fallback: pick a random title from top manga search results
+  try {
+    const randomPage = Math.floor(Math.random() * 5) + 1;
+    const items = await fetchDirectMangaSearch('', randomPage);
+    if (items.length > 0) {
+      const randomIdx = Math.floor(Math.random() * items.length);
+      return items[randomIdx];
+    }
+  } catch {}
+
+  return null;
+}
+
+export async function fetchDirectAnimeRelations(id: string): Promise<any[]> {
+  const rawId = id.replace('mal_', '').replace('kitsu_', '');
+  try {
+    const res = await fetchWithRetry(`https://api.jikan.moe/v4/anime/${rawId}/relations`);
+    if (res.ok) {
+      const json = await res.json();
+      const rawRelations = json.data || [];
+      return rawRelations.flatMap((group: any) =>
+        (group.entry || []).map((entry: any) => ({
+          id: entry.type === 'manga' ? `manga_${entry.mal_id}` : `mal_${entry.mal_id}`,
+          type: group.relation || entry.type || 'Related',
+          name: entry.name,
+          mediaType: entry.type,
+          url: entry.url,
+        }))
+      );
+    }
+  } catch (err) {
+    console.warn('[DirectApi] fetchDirectAnimeRelations failed:', err);
+  }
+  return [];
+}
+
+export async function fetchDirectMangaRelations(id: string): Promise<any[]> {
+  const rawId = id.replace('mangadex_', '').replace('kitsu_manga_', '').replace('manga_', '').replace('mal_', '');
+  try {
+    const res = await fetchWithRetry(`https://api.jikan.moe/v4/manga/${rawId}/relations`);
+    if (res.ok) {
+      const json = await res.json();
+      const rawRelations = json.data || [];
+      return rawRelations.flatMap((group: any) =>
+        (group.entry || []).map((entry: any) => ({
+          id: entry.type === 'anime' ? `mal_${entry.mal_id}` : `manga_${entry.mal_id}`,
+          type: group.relation || entry.type || 'Related',
+          name: entry.name,
+          mediaType: entry.type,
+          url: entry.url,
+        }))
+      );
+    }
+  } catch (err) {
+    console.warn('[DirectApi] fetchDirectMangaRelations failed:', err);
+  }
+  return [];
+}
+
+export async function fetchDirectAnimeRecommendations(id: string): Promise<Anime[]> {
+  const rawId = id.replace('mal_', '').replace('kitsu_', '');
+  try {
+    const res = await fetchWithRetry(`https://api.jikan.moe/v4/anime/${rawId}/recommendations`);
+    if (res.ok) {
+      const json = await res.json();
+      const items = json.data || [];
+      return items.slice(0, 8).map((rec: any) => normalizeJikan(rec.entry));
+    }
+  } catch (err) {
+    console.warn('[DirectApi] fetchDirectAnimeRecommendations failed:', err);
+  }
+  return [];
+}
+
+export async function fetchDirectMangaRecommendations(id: string): Promise<Manga[]> {
+  const rawId = id.replace('mangadex_', '').replace('kitsu_manga_', '').replace('manga_', '').replace('mal_', '');
+  try {
+    const res = await fetchWithRetry(`https://api.jikan.moe/v4/manga/${rawId}/recommendations`);
+    if (res.ok) {
+      const json = await res.json();
+      const items = json.data || [];
+      return items.slice(0, 8).map((rec: any) => normalizeJikanManga(rec.entry));
+    }
+  } catch (err) {
+    console.warn('[DirectApi] fetchDirectMangaRecommendations failed:', err);
+  }
+  return [];
+}
+
 // Normalizers
 function normalizeJikan(item: any): Anime {
   return {
     id: `mal_${item.mal_id}`,
-    title: item.title || 'Unknown Title',
+    title: item.title || item.name || 'Unknown Title',
     alternativeTitles: item.title_english ? [item.title_english] : [],
     description: item.synopsis || undefined,
     image: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url,
@@ -476,7 +664,7 @@ function normalizeMangaDex(item: any): Manga {
 function normalizeJikanManga(item: any): Manga {
   return {
     id: `manga_${item.mal_id}`,
-    title: item.title || item.title_english || 'Unknown Manga',
+    title: item.title || item.title_english || item.name || 'Unknown Manga',
     alternativeTitles: item.title_english ? [item.title_english] : [],
     description: item.synopsis || item.background || undefined,
     image: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url,

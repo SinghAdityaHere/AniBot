@@ -1,9 +1,13 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Sun, Moon } from 'lucide-react';
+import { Sparkles, Sun, Moon, Command } from 'lucide-react';
 import { useTheme } from '../../stores/useThemeStore';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onOpenCommandPalette?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onOpenCommandPalette }) => {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
 
@@ -19,14 +23,39 @@ export const Header: React.FC = () => {
 
         <nav className="nav-links">
           <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>
-            Anime
+            Home
+          </Link>
+          <Link to="/discover" className={`nav-link ${isActive('/discover') ? 'active' : ''}`}>
+            Discover
           </Link>
           <Link to="/manga" className={`nav-link ${isActive('/manga') ? 'active' : ''}`}>
             Manga
           </Link>
-          <Link to="/favourites" className={`nav-link ${isActive('/favourites') ? 'active' : ''}`}>
-            Favourites
+          <Link to="/library" className={`nav-link ${isActive('/library') || isActive('/favourites') ? 'active' : ''}`}>
+            My Library
           </Link>
+
+          {onOpenCommandPalette && (
+            <button
+              onClick={onOpenCommandPalette}
+              className="cmd-palette-btn"
+              title="Open Command Palette (Ctrl+K)"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-pill)',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--color-border)',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              <Command size={14} /> <span>Ctrl+K</span>
+            </button>
+          )}
 
           <button
             onClick={toggleTheme}

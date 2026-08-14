@@ -1,12 +1,13 @@
 import React from 'react';
 import { useRandomQuote } from '../../api/quotes';
 import { QuoteCard } from './QuoteCard';
+import { QuoteCardSkeleton } from '../ui/Skeleton';
 
 export const RandomQuote: React.FC = () => {
-  const { data: quote, isLoading, isError } = useRandomQuote();
+  const { data: quote, isLoading, isError, isFetching, refetch } = useRandomQuote();
 
   if (isLoading) {
-    return <div className="skeleton" style={{ height: 140, borderRadius: 'var(--radius-lg)' }} />;
+    return <QuoteCardSkeleton />;
   }
 
   if (isError || !quote) {
@@ -25,5 +26,5 @@ export const RandomQuote: React.FC = () => {
     );
   }
 
-  return <QuoteCard quote={quote} />;
+  return <QuoteCard quote={quote} onRefresh={() => refetch()} isRefreshing={isFetching} />;
 };

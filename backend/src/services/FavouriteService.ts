@@ -49,14 +49,19 @@ export class FavouriteService {
   }
 
   public static async remove(userId: string, animeId: string): Promise<void> {
+    const rawId = animeId.replace(/^lib_/, '');
+    const malId = rawId.startsWith('mal_') ? rawId : `mal_${rawId}`;
+    const plainId = rawId.replace(/^mal_/, '');
+
     try {
-      await prisma.favourite.delete({
+      await prisma.favourite.deleteMany({
         where: {
-          userId_animeId: { userId, animeId },
+          userId,
+          animeId: { in: [animeId, rawId, malId, plainId] },
         },
       });
-    } catch {
-      throw new NotFoundError('Favourite not found');
+    } catch (err) {
+      console.warn('[FavouriteService] Error removing favourite:', err);
     }
   }
 }
