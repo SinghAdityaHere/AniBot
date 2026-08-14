@@ -45,4 +45,4 @@ npm run dev
 
 ## Project Preview
 
-(./docs/preview.png)
+![AniBot Preview](./docs/preview.png)
