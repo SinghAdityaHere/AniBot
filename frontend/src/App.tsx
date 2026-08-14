@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Header } from './components/navigation/Header';
 import { MobileNav } from './components/navigation/MobileNav';
@@ -23,7 +23,7 @@ const queryClient = new QueryClient({
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <HashRouter>
         <div className="app-shell">
           <Header />
           <main className="main-content">
@@ -39,7 +39,7 @@ export const App: React.FC = () => {
           </main>
           <MobileNav />
         </div>
-      </BrowserRouter>
+      </HashRouter>
     </QueryClientProvider>
   );
 };
