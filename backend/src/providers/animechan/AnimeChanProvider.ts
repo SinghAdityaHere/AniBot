@@ -3,46 +3,14 @@ import { AnimeQuote } from '@anibot/shared';
 import { QuoteProvider } from '../QuoteProvider';
 import { config } from '../../config';
 
-const FALLBACK_QUOTES: AnimeQuote[] = [
-  {
-    id: 'fb_1',
-    quote: "If you don't take risks, you can't create a future.",
-    character: 'Monkey D. Luffy',
-    animeTitle: 'One Piece',
-  },
-  {
-    id: 'fb_2',
-    quote: 'People’s lives don’t end when they die. It ends when they lose faith.',
-    character: 'Itachi Uchiha',
-    animeTitle: 'Naruto',
-  },
-  {
-    id: 'fb_3',
-    quote: 'In order to gain something, you must lose something of equal value.',
-    character: 'Edward Elric',
-    animeTitle: 'Fullmetal Alchemist',
-  },
-  {
-    id: 'fb_4',
-    quote: 'Hard work is worthless for those that don’t believe in themselves.',
-    character: 'Naruto Uzumaki',
-    animeTitle: 'Naruto',
-  },
-  {
-    id: 'fb_5',
-    quote: 'Fear is not evil. It tells you what your weakness is.',
-    character: 'Gildarts Clive',
-    animeTitle: 'Fairy Tail',
-  },
-];
-
 export class AnimeChanProvider implements QuoteProvider {
   public name = 'animechan';
 
   public async getRandomQuote(): Promise<AnimeQuote> {
+    // Primary Endpoint: AnimeChan API
     try {
       const res = await axios.get(`${config.animeChanUrl}/quotes/random`, {
-        timeout: 5000,
+        timeout: 6000,
       });
 
       const data = res.data?.data || res.data;
@@ -55,19 +23,54 @@ export class AnimeChanProvider implements QuoteProvider {
         };
       }
     } catch (err: any) {
-      console.warn('[AnimeChanProvider] API unavailable, using fallback quote:', err?.message);
+      console.warn(`[AnimeChanProvider] Primary API error (${err?.message}), trying secondary live quote API...`);
     }
 
-    // Fallback gracefully
-    const randomIndex = Math.floor(Math.random() * FALLBACK_QUOTES.length);
-    return FALLBACK_QUOTES[randomIndex];
+    // Secondary Live API Endpoint: animechan.xyz API
+    try {
+      const res = await axios.get('https://animechan.xyz/api/random', {
+        timeout: 6000,
+      });
+
+      if (res.data && res.data.quote) {
+        return {
+          id: `ac_xyz_${Date.now()}`,
+          quote: res.data.quote,
+          character: res.data.character,
+          animeTitle: res.data.anime,
+        };
+      }
+    } catch (err: any) {
+      console.warn(`[AnimeChanProvider] Secondary quote API error (${err?.message}), trying Quotable API...`);
+    }
+
+    // Tertiary Live API Endpoint: Quotable API
+    try {
+      const res = await axios.get('https://api.quotable.io/quotes/random?tags=wisdom|inspirational', {
+        timeout: 6000,
+      });
+
+      const item = Array.isArray(res.data) ? res.data[0] : res.data;
+      if (item && item.content) {
+        return {
+          id: `quotable_${item._id || Date.now()}`,
+          quote: item.content,
+          character: item.author,
+          animeTitle: 'Inspirational Quote',
+        };
+      }
+    } catch (err: any) {
+      console.warn(`[AnimeChanProvider] Quotable API error: ${err?.message}`);
+    }
+
+    throw new Error('All live quote APIs are currently unavailable');
   }
 
   public async getQuotesByAnime(title: string): Promise<AnimeQuote[]> {
     try {
       const res = await axios.get(`${config.animeChanUrl}/quotes/anime`, {
         params: { title },
-        timeout: 5000,
+        timeout: 6000,
       });
 
       const data = res.data?.data || res.data;
@@ -80,13 +83,28 @@ export class AnimeChanProvider implements QuoteProvider {
         }));
       }
     } catch (err: any) {
-      console.warn('[AnimeChanProvider] API getQuotesByAnime error:', err?.message);
+      console.warn(`[AnimeChanProvider] API getQuotesByAnime error: ${err?.message}`);
     }
 
-    // Return matching fallbacks or empty array gracefully
-    const matching = FALLBACK_QUOTES.filter(
-      (q) => q.animeTitle?.toLowerCase().includes(title.toLowerCase())
-    );
-    return matching;
+    // Secondary live endpoint query by anime title
+    try {
+      const res = await axios.get(`https://animechan.xyz/api/quotes/anime`, {
+        params: { title },
+        timeout: 6000,
+      });
+
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        return res.data.slice(0, 5).map((item: any, idx: number) => ({
+          id: `ac_xyz_q_${idx}_${Date.now()}`,
+          quote: item.quote,
+          character: item.character,
+          animeTitle: item.anime || title,
+        }));
+      }
+    } catch (err: any) {
+      console.warn(`[AnimeChanProvider] Secondary quotes by anime error: ${err?.message}`);
+    }
+
+    return [];
   }
 }
