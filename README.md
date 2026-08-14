@@ -31,10 +31,3 @@ npm install
 # Start backend and frontend concurrently
 npm run dev
 ```
-
-- Frontend SPA: http://localhost:3000
-- Backend REST API: http://localhost:3001
-
-## License
-
-Distributed under the MIT License.
