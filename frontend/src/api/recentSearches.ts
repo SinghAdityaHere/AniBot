@@ -1,11 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RecentSearch } from '@anibot/shared';
 import { fetchApi } from './client';
+import {
+  getLocalRecentSearches,
+  saveLocalRecentSearch,
+  deleteLocalRecentSearch,
+  clearLocalRecentSearches,
+} from './directApi';
 
 export function useRecentSearches() {
   return useQuery<RecentSearch[]>({
     queryKey: ['recent-searches'],
-    queryFn: () => fetchApi<RecentSearch[]>('/api/v1/recent-searches'),
+    queryFn: async () => {
+      try {
+        return await fetchApi<RecentSearch[]>('/api/v1/recent-searches');
+      } catch {
+        return getLocalRecentSearches();
+      }
+    },
   });
 }
 
@@ -13,31 +25,48 @@ export function useRecentSearchMutations() {
   const queryClient = useQueryClient();
 
   const addSearch = useMutation({
-    mutationFn: ({ query, animeId }: { query: string; animeId?: string }) =>
-      fetchApi<RecentSearch>('/api/v1/recent-searches', {
-        method: 'POST',
-        body: JSON.stringify({ query, animeId }),
-      }),
+    mutationFn: async ({ query, animeId }: { query: string; animeId?: string }) => {
+      try {
+        return await fetchApi<RecentSearch>('/api/v1/recent-searches', {
+          method: 'POST',
+          body: JSON.stringify({ query, animeId }),
+        });
+      } catch {
+        return saveLocalRecentSearch(query, animeId);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recent-searches'] });
     },
   });
 
   const deleteSearch = useMutation({
-    mutationFn: (id: string) =>
-      fetchApi<{ deleted: boolean }>(`/api/v1/recent-searches/${id}`, {
-        method: 'DELETE',
-      }),
+    mutationFn: async (id: string) => {
+      try {
+        return await fetchApi<{ deleted: boolean }>(`/api/v1/recent-searches/${id}`, {
+          method: 'DELETE',
+        });
+      } catch {
+        deleteLocalRecentSearch(id);
+        return { deleted: true };
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recent-searches'] });
     },
   });
 
   const clearAllSearches = useMutation({
-    mutationFn: () =>
-      fetchApi<{ cleared: boolean }>('/api/v1/recent-searches', {
-        method: 'DELETE',
-      }),
+    mutationFn: async () => {
+      try {
+        return await fetchApi<{ cleared: boolean }>('/api/v1/recent-searches', {
+          method: 'DELETE',
+        });
+      } catch {
+        clearLocalRecentSearches();
+        return { cleared: true };
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recent-searches'] });
     },
