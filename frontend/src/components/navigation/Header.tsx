@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Sun, Moon, BookOpen } from 'lucide-react';
+import { Sparkles, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../stores/useThemeStore';
 
 export const Header: React.FC = () => {
@@ -24,14 +24,8 @@ export const Header: React.FC = () => {
           <Link to="/manga" className={`nav-link ${isActive('/manga') ? 'active' : ''}`}>
             Manga
           </Link>
-          <Link to="/search" className={`nav-link ${isActive('/search') ? 'active' : ''}`}>
-            Search
-          </Link>
           <Link to="/favourites" className={`nav-link ${isActive('/favourites') ? 'active' : ''}`}>
             Favourites
-          </Link>
-          <Link to="/recent-searches" className={`nav-link ${isActive('/recent-searches') ? 'active' : ''}`}>
-            History
           </Link>
 
           <button
