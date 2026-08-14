@@ -1,7 +1,9 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { animeRouter } from './routes/anime';
+import { mangaRouter } from './routes/manga';
 import { quotesRouter } from './routes/quotes';
+import { factsRouter } from './routes/facts';
 import { favouritesRouter } from './routes/favourites';
 import { recentSearchesRouter } from './routes/recentSearches';
 import { requestLogger } from './middleware/requestLogger';
@@ -28,11 +30,16 @@ app.get('/api/v1/metrics', (_req: Request, res: Response) => {
 
 // API Routes with Rate Limiters
 app.use('/api/v1/anime/search', searchRateLimiter);
+app.use('/api/v1/manga/search', searchRateLimiter);
 app.use('/api/v1/anime/:id', detailsRateLimiter);
+app.use('/api/v1/manga/:id', detailsRateLimiter);
 app.use('/api/v1/quotes', quotesRateLimiter);
+app.use('/api/v1/facts', quotesRateLimiter);
 
 app.use('/api/v1/anime', animeRouter);
+app.use('/api/v1/manga', mangaRouter);
 app.use('/api/v1/quotes', quotesRouter);
+app.use('/api/v1/facts', factsRouter);
 app.use('/api/v1/favourites', favouritesRouter);
 app.use('/api/v1/recent-searches', recentSearchesRouter);
 

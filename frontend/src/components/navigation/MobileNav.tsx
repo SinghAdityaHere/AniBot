@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, Heart, History } from 'lucide-react';
+import { Home, BookOpen, Search, Heart, History } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
   const location = useLocation();
@@ -10,7 +10,11 @@ export const MobileNav: React.FC = () => {
     <nav className="mobile-nav-bar">
       <Link to="/" className={`mobile-nav-item ${isActive('/') ? 'active' : ''}`}>
         <Home size={20} />
-        <span>Home</span>
+        <span>Anime</span>
+      </Link>
+      <Link to="/manga" className={`mobile-nav-item ${isActive('/manga') ? 'active' : ''}`}>
+        <BookOpen size={20} />
+        <span>Manga</span>
       </Link>
       <Link to="/search" className={`mobile-nav-item ${isActive('/search') ? 'active' : ''}`}>
         <Search size={20} />
@@ -18,11 +22,7 @@ export const MobileNav: React.FC = () => {
       </Link>
       <Link to="/favourites" className={`mobile-nav-item ${isActive('/favourites') ? 'active' : ''}`}>
         <Heart size={20} />
-        <span>Favourites</span>
-      </Link>
-      <Link to="/recent-searches" className={`mobile-nav-item ${isActive('/recent-searches') ? 'active' : ''}`}>
-        <History size={20} />
-        <span>Recent</span>
+        <span>Favs</span>
       </Link>
     </nav>
   );

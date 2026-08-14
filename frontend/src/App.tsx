@@ -6,6 +6,8 @@ import { MobileNav } from './components/navigation/MobileNav';
 import { Home } from './pages/Home';
 import { SearchPage } from './pages/Search';
 import { AnimeDetailPage } from './pages/AnimeDetail';
+import { MangaExplorerPage } from './pages/MangaExplorer';
+import { MangaDetailPage } from './pages/MangaDetail';
 import { FavouritesPage } from './pages/Favourites';
 import { RecentSearchesPage } from './pages/RecentSearches';
 
@@ -27,6 +29,8 @@ export const App: React.FC = () => {
           <main className="main-content">
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/manga" element={<MangaExplorerPage />} />
+              <Route path="/manga/:id" element={<MangaDetailPage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/anime/:id" element={<AnimeDetailPage />} />
               <Route path="/favourites" element={<FavouritesPage />} />

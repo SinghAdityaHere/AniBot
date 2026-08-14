@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Sun, Moon } from 'lucide-react';
+import { Sparkles, Sun, Moon, BookOpen } from 'lucide-react';
 import { useTheme } from '../../stores/useThemeStore';
 
 export const Header: React.FC = () => {
@@ -19,7 +19,10 @@ export const Header: React.FC = () => {
 
         <nav className="nav-links">
           <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>
-            Explore
+            Anime
+          </Link>
+          <Link to="/manga" className={`nav-link ${isActive('/manga') ? 'active' : ''}`}>
+            Manga
           </Link>
           <Link to="/search" className={`nav-link ${isActive('/search') ? 'active' : ''}`}>
             Search
