@@ -48,7 +48,7 @@ export const Home: React.FC = () => {
             marginInline: 'auto',
           }}
         >
-          Explore thousands of Anime titles, Manga series, Quotes & Trivia powered by unified live APIs.
+          Explore thousands of Anime titles, Manga series, Quotes & Trivia
         </p>
 
         <SearchBar onSearch={handleSearch} />
