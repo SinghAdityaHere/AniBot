@@ -1,6 +1,10 @@
 # AniBot — Unified Anime & Manga Discovery Platform
 
-AniBot is a clean, modern discovery platform for Anime, Manga, Quotes, and Trivia built with React, TypeScript, and a unified multi-provider REST API data layer.
+ AniBot is a clean, modern discovery platform for Anime, Manga, Quotes, and Trivia built with React, TypeScript, and a unified multi-provider REST API data layer.
+
+👉 **[Visit Now (Live Demo)](https://singhadityahere.github.io/AniBot/)**
+
+---
 
 ## Features
 
@@ -31,3 +35,20 @@ npm install
 # Start backend and frontend concurrently
 npm run dev
 ```
+
+- Frontend SPA: http://localhost:3000
+- Backend REST API: http://localhost:3001
+
+---
+
+## Project Preview
+
+![AniBot Dashboard Preview](./docs/preview1.jpg)
+
+![AniBot Manga Explorer Preview](./docs/preview2.png)
+
+---
+
+## License
+
+Distributed under the MIT License.
