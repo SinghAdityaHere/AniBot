@@ -7,7 +7,7 @@ import { BookOpen } from 'lucide-react';
 
 export const MangaExplorerPage: React.FC = () => {
   const [query, setQuery] = useState('');
-  const { data: mangas = [], isLoading } = useMangaSearch(query || 'Berserk');
+  const { data: mangas = [], isLoading } = useMangaSearch(query);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -17,7 +17,7 @@ export const MangaExplorerPage: React.FC = () => {
           <h1 style={{ fontSize: 28 }}>Manga Explorer</h1>
         </div>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: 15, marginBottom: 20 }}>
-          Discover top rated Manga, Manhwa, and Light Novels powered by MangaDex & MyAnimeList.
+          Discover top rated Manga, Manhwa, and Light Novels powered by MyAnimeList, Kitsu & MangaDex.
         </p>
 
         <SearchBar
@@ -33,7 +33,7 @@ export const MangaExplorerPage: React.FC = () => {
         <MangaGrid mangas={mangas} />
       ) : (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--color-text-secondary)' }}>
-          No manga titles found matching "{query}".
+          {query ? `No manga titles found matching "${query}".` : 'Loading popular manga...'}
         </div>
       )}
     </div>

@@ -17,8 +17,8 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 // Direct Browser Anime Fetching (Jikan v4 -> Kitsu fallback)
 export async function fetchDirectAnimeSearch(query: string, page = 1): Promise<Anime[]> {
   try {
-    const url = query
-      ? `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&page=${page}&limit=20&sfw=true`
+    const url = query && query.trim()
+      ? `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query.trim())}&page=${page}&limit=20&sfw=true`
       : `https://api.jikan.moe/v4/top/anime?page=${page}&limit=20`;
 
     const res = await fetchWithTimeout(url);
@@ -36,8 +36,8 @@ export async function fetchDirectAnimeSearch(query: string, page = 1): Promise<A
   // Fallback to Kitsu API directly from browser
   try {
     const offset = (page - 1) * 20;
-    const kitsuUrl = query
-      ? `https://kitsu.io/api/edge/anime?filter[text]=${encodeURIComponent(query)}&page[limit]=20&page[offset]=${offset}`
+    const kitsuUrl = query && query.trim()
+      ? `https://kitsu.io/api/edge/anime?filter[text]=${encodeURIComponent(query.trim())}&page[limit]=20&page[offset]=${offset}`
       : `https://kitsu.io/api/edge/anime?sort=-userCount&page[limit]=20&page[offset]=${offset}`;
 
     const res = await fetchWithTimeout(kitsuUrl);
@@ -86,40 +86,62 @@ export async function fetchDirectAnimeDetail(id: string): Promise<Anime | null> 
   return null;
 }
 
-// Direct Browser Manga Fetching (MangaDex -> Jikan Manga -> Kitsu Manga)
+// Direct Browser Manga Fetching (Jikan Manga -> Kitsu Manga -> MangaDex)
 export async function fetchDirectMangaSearch(query: string, page = 1): Promise<Manga[]> {
-  try {
-    const offset = (page - 1) * 20;
-    const mangaDexUrl = query
-      ? `https://api.mangadex.org/manga?title=${encodeURIComponent(query)}&limit=20&offset=${offset}&includes[]=cover_art`
-      : `https://api.mangadex.org/manga?limit=20&offset=${offset}&order[followedCount]=desc&includes[]=cover_art`;
+  const q = (query || '').trim();
 
-    const res = await fetchWithTimeout(mangaDexUrl);
-    if (res.ok) {
-      const json = await res.json();
-      const items = json.data || [];
-      if (items.length > 0) {
-        return items.map((item: any) => normalizeMangaDex(item));
-      }
-    }
-  } catch (err) {
-    console.warn('[DirectApi] MangaDex API failed, trying Jikan Manga...', err);
-  }
-
-  // Jikan Manga Fallback
+  // Try Jikan (MyAnimeList) Manga API
   try {
-    const jikanMangaUrl = query
-      ? `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(query)}&page=${page}&limit=20`
+    const jikanMangaUrl = q
+      ? `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(q)}&page=${page}&limit=20`
       : `https://api.jikan.moe/v4/top/manga?page=${page}&limit=20`;
 
     const res = await fetchWithTimeout(jikanMangaUrl);
     if (res.ok) {
       const json = await res.json();
       const items = json.data || [];
-      return items.map((item: any) => normalizeJikanManga(item));
+      if (items.length > 0) {
+        return items.map((item: any) => normalizeJikanManga(item));
+      }
     }
   } catch (err) {
-    console.warn('[DirectApi] Jikan Manga failed:', err);
+    console.warn('[DirectApi] Jikan Manga failed, trying Kitsu Manga...', err);
+  }
+
+  // Try Kitsu Manga API
+  try {
+    const offset = (page - 1) * 20;
+    const kitsuMangaUrl = q
+      ? `https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(q)}&page[limit]=20&page[offset]=${offset}`
+      : `https://kitsu.io/api/edge/manga?sort=-userCount&page[limit]=20&page[offset]=${offset}`;
+
+    const res = await fetchWithTimeout(kitsuMangaUrl);
+    if (res.ok) {
+      const json = await res.json();
+      const items = json.data || [];
+      if (items.length > 0) {
+        return items.map((item: any) => normalizeKitsuManga(item));
+      }
+    }
+  } catch (err) {
+    console.warn('[DirectApi] Kitsu Manga failed, trying MangaDex...', err);
+  }
+
+  // Try MangaDex API
+  try {
+    const offset = (page - 1) * 20;
+    const mangaDexUrl = q
+      ? `https://api.mangadex.org/manga?title=${encodeURIComponent(q)}&limit=20&offset=${offset}&includes%5B%5D=cover_art`
+      : `https://api.mangadex.org/manga?limit=20&offset=${offset}&order%5BfollowedCount%5D=desc&includes%5B%5D=cover_art`;
+
+    const res = await fetchWithTimeout(mangaDexUrl);
+    if (res.ok) {
+      const json = await res.json();
+      const items = json.data || [];
+      return items.map((item: any) => normalizeMangaDex(item));
+    }
+  } catch (err) {
+    console.warn('[DirectApi] MangaDex API failed:', err);
   }
 
   return [];
@@ -130,7 +152,7 @@ export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> 
 
   if (id.startsWith('mangadex_')) {
     try {
-      const res = await fetchWithTimeout(`https://api.mangadex.org/manga/${rawId}?includes[]=cover_art`);
+      const res = await fetchWithTimeout(`https://api.mangadex.org/manga/${rawId}?includes%5B%5D=cover_art`);
       if (res.ok) {
         const json = await res.json();
         if (json.data) return normalizeMangaDex(json.data);
@@ -143,6 +165,14 @@ export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> 
     if (res.ok) {
       const json = await res.json();
       if (json.data) return normalizeJikanManga(json.data);
+    }
+  } catch {}
+
+  try {
+    const res = await fetchWithTimeout(`https://kitsu.io/api/edge/manga/${rawId}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) return normalizeKitsuManga(json.data);
     }
   } catch {}
 
@@ -340,6 +370,26 @@ function normalizeKitsu(item: any): Anime {
     studios: [],
     airedInfo: attr.startDate ? `${attr.startDate} to ${attr.endDate || 'Present'}` : undefined,
     externalIds: { jikan: item.id },
+  };
+}
+
+function normalizeKitsuManga(item: any): Manga {
+  const attr = item.attributes || {};
+  return {
+    id: `kitsu_manga_${item.id}`,
+    title: attr.canonicalTitle || attr.en_jp || 'Unknown Manga',
+    alternativeTitles: attr.titles ? Object.values(attr.titles).filter((t): t is string => typeof t === 'string') : [],
+    description: attr.synopsis || undefined,
+    image: attr.posterImage?.large || attr.posterImage?.medium,
+    year: attr.startDate ? new Date(attr.startDate).getFullYear() : undefined,
+    status: attr.status === 'finished' ? 'Finished' : 'Publishing',
+    type: attr.mangaType ? attr.mangaType.toUpperCase() : 'Manga',
+    chapters: attr.chapterCount || undefined,
+    volumes: attr.volumeCount || undefined,
+    score: attr.averageRating ? parseFloat(attr.averageRating) / 10 : undefined,
+    genres: [],
+    authors: [],
+    externalIds: { kitsu: item.id },
   };
 }
 
