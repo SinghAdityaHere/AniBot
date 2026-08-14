@@ -14,6 +14,26 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
   }
 }
 
+// Helper to fetch with retry (handles rate limiting 429 & temporary network hiccups)
+async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3, delayMs = 600): Promise<Response> {
+  let lastResponse: Response | null = null;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await fetchWithTimeout(url, options, 8000);
+      lastResponse = res;
+      if (res.status === 429 || res.status === 504) {
+        await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+        continue;
+      }
+      if (res.ok) return res;
+    } catch (err) {
+      if (attempt === retries - 1) break;
+      await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+    }
+  }
+  return lastResponse || fetchWithTimeout(url, options, 8000);
+}
+
 // Check if running on static host like GitHub Pages
 export function isStaticHost(): boolean {
   return typeof window !== 'undefined' && (
@@ -31,7 +51,7 @@ export async function fetchDirectAnimeSearch(query: string, page = 1): Promise<A
       ? `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query.trim())}&page=${page}&limit=20&sfw=true`
       : `https://api.jikan.moe/v4/top/anime?page=${page}&limit=20`;
 
-    const res = await fetchWithTimeout(url);
+    const res = await fetchWithRetry(url);
     if (res.ok) {
       const json = await res.json();
       const items = json.data || [];
@@ -50,7 +70,7 @@ export async function fetchDirectAnimeSearch(query: string, page = 1): Promise<A
       ? `https://kitsu.io/api/edge/anime?filter[text]=${encodeURIComponent(query.trim())}&page[limit]=20&page[offset]=${offset}`
       : `https://kitsu.io/api/edge/anime?sort=-userCount&page[limit]=20&page[offset]=${offset}`;
 
-    const res = await fetchWithTimeout(kitsuUrl);
+    const res = await fetchWithRetry(kitsuUrl);
     if (res.ok) {
       const json = await res.json();
       const items = json.data || [];
@@ -68,7 +88,7 @@ export async function fetchDirectAnimeDetail(id: string): Promise<Anime | null> 
 
   if (id.startsWith('kitsu_')) {
     try {
-      const res = await fetchWithTimeout(`https://kitsu.io/api/edge/anime/${rawId}`);
+      const res = await fetchWithRetry(`https://kitsu.io/api/edge/anime/${rawId}`);
       if (res.ok) {
         const json = await res.json();
         if (json.data) return normalizeKitsu(json.data);
@@ -77,7 +97,7 @@ export async function fetchDirectAnimeDetail(id: string): Promise<Anime | null> 
   }
 
   try {
-    const res = await fetchWithTimeout(`https://api.jikan.moe/v4/anime/${rawId}`);
+    const res = await fetchWithRetry(`https://api.jikan.moe/v4/anime/${rawId}`);
     if (res.ok) {
       const json = await res.json();
       if (json.data) return normalizeJikan(json.data);
@@ -86,7 +106,7 @@ export async function fetchDirectAnimeDetail(id: string): Promise<Anime | null> 
 
   // Fallback to Kitsu
   try {
-    const res = await fetchWithTimeout(`https://kitsu.io/api/edge/anime/${rawId}`);
+    const res = await fetchWithRetry(`https://kitsu.io/api/edge/anime/${rawId}`);
     if (res.ok) {
       const json = await res.json();
       if (json.data) return normalizeKitsu(json.data);
@@ -106,7 +126,7 @@ export async function fetchDirectMangaSearch(query: string, page = 1): Promise<M
       ? `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(q)}&page=${page}&limit=20`
       : `https://api.jikan.moe/v4/top/manga?page=${page}&limit=20`;
 
-    const res = await fetchWithTimeout(jikanMangaUrl);
+    const res = await fetchWithRetry(jikanMangaUrl);
     if (res.ok) {
       const json = await res.json();
       const items = json.data || [];
@@ -125,7 +145,7 @@ export async function fetchDirectMangaSearch(query: string, page = 1): Promise<M
       ? `https://kitsu.io/api/edge/manga?filter[text]=${encodeURIComponent(q)}&page[limit]=20&page[offset]=${offset}`
       : `https://kitsu.io/api/edge/manga?sort=-userCount&page[limit]=20&page[offset]=${offset}`;
 
-    const res = await fetchWithTimeout(kitsuMangaUrl);
+    const res = await fetchWithRetry(kitsuMangaUrl);
     if (res.ok) {
       const json = await res.json();
       const items = json.data || [];
@@ -144,7 +164,7 @@ export async function fetchDirectMangaSearch(query: string, page = 1): Promise<M
       ? `https://api.mangadex.org/manga?title=${encodeURIComponent(q)}&limit=20&offset=${offset}&includes%5B%5D=cover_art`
       : `https://api.mangadex.org/manga?limit=20&offset=${offset}&order%5BfollowedCount%5D=desc&includes%5B%5D=cover_art`;
 
-    const res = await fetchWithTimeout(mangaDexUrl);
+    const res = await fetchWithRetry(mangaDexUrl);
     if (res.ok) {
       const json = await res.json();
       const items = json.data || [];
@@ -163,7 +183,7 @@ export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> 
   // 1. Kitsu Manga ID
   if (id.startsWith('kitsu_manga_') || id.startsWith('kitsu_')) {
     try {
-      const res = await fetchWithTimeout(`https://kitsu.io/api/edge/manga/${rawId}`);
+      const res = await fetchWithRetry(`https://kitsu.io/api/edge/manga/${rawId}`);
       if (res.ok) {
         const json = await res.json();
         if (json.data) return normalizeKitsuManga(json.data);
@@ -176,7 +196,7 @@ export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> 
   // 2. MangaDex ID
   if (id.startsWith('mangadex_')) {
     try {
-      const res = await fetchWithTimeout(`https://api.mangadex.org/manga/${rawId}?includes%5B%5D=cover_art`);
+      const res = await fetchWithRetry(`https://api.mangadex.org/manga/${rawId}?includes%5B%5D=cover_art`);
       if (res.ok) {
         const json = await res.json();
         if (json.data) return normalizeMangaDex(json.data);
@@ -188,7 +208,7 @@ export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> 
 
   // 3. MyAnimeList / Jikan Manga ID
   try {
-    const res = await fetchWithTimeout(`https://api.jikan.moe/v4/manga/${rawId}`);
+    const res = await fetchWithRetry(`https://api.jikan.moe/v4/manga/${rawId}`);
     if (res.ok) {
       const json = await res.json();
       if (json.data) return normalizeJikanManga(json.data);
@@ -199,7 +219,7 @@ export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> 
 
   // Fallbacks across providers
   try {
-    const res = await fetchWithTimeout(`https://kitsu.io/api/edge/manga/${rawId}`);
+    const res = await fetchWithRetry(`https://kitsu.io/api/edge/manga/${rawId}`);
     if (res.ok) {
       const json = await res.json();
       if (json.data) return normalizeKitsuManga(json.data);
@@ -207,7 +227,7 @@ export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> 
   } catch {}
 
   try {
-    const res = await fetchWithTimeout(`https://api.mangadex.org/manga/${rawId}?includes%5B%5D=cover_art`);
+    const res = await fetchWithRetry(`https://api.mangadex.org/manga/${rawId}?includes%5B%5D=cover_art`);
     if (res.ok) {
       const json = await res.json();
       if (json.data) return normalizeMangaDex(json.data);
@@ -220,7 +240,7 @@ export async function fetchDirectMangaDetail(id: string): Promise<Manga | null> 
 // Direct Browser Quote & Fact Fetching
 export async function fetchDirectRandomQuote(): Promise<AnimeQuote> {
   try {
-    const res = await fetchWithTimeout('https://animechan.xyz/api/random', {}, 5000);
+    const res = await fetchWithRetry('https://animechan.xyz/api/random', {}, 2, 400);
     if (res.ok) {
       const data = await res.json();
       if (data && data.quote) {
@@ -235,7 +255,7 @@ export async function fetchDirectRandomQuote(): Promise<AnimeQuote> {
   } catch {}
 
   try {
-    const res = await fetchWithTimeout('https://api.quotable.io/quotes/random?tags=wisdom|inspirational', {}, 5000);
+    const res = await fetchWithRetry('https://api.quotable.io/quotes/random?tags=wisdom|inspirational', {}, 2, 400);
     if (res.ok) {
       const data = await res.json();
       const item = Array.isArray(data) ? data[0] : data;
@@ -261,7 +281,7 @@ export async function fetchDirectRandomQuote(): Promise<AnimeQuote> {
 export async function fetchDirectAnimeQuotes(title?: string): Promise<AnimeQuote[]> {
   if (!title) return [];
   try {
-    const res = await fetchWithTimeout(`https://animechan.xyz/api/quotes/anime?title=${encodeURIComponent(title)}`, {}, 5000);
+    const res = await fetchWithRetry(`https://animechan.xyz/api/quotes/anime?title=${encodeURIComponent(title)}`, {}, 2, 400);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
@@ -281,7 +301,7 @@ export async function fetchDirectRandomFact(): Promise<AnimeFact> {
   const animes = ['fma', 'naruto', 'bleach', 'one_piece', 'attack_on_titan', 'dragon_ball'];
   const anime = animes[Math.floor(Math.random() * animes.length)];
   try {
-    const res = await fetchWithTimeout(`https://anime-facts-rest-api.herokuapp.com/api/v1/${anime}`, {}, 5000);
+    const res = await fetchWithRetry(`https://anime-facts-rest-api.herokuapp.com/api/v1/${anime}`, {}, 2, 400);
     if (res.ok) {
       const json = await res.json();
       const facts = json.data || [];
